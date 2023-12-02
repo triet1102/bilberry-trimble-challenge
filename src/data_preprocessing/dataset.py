@@ -1,7 +1,6 @@
 from torch.utils.data import Dataset
-import albumentations as A
 from collections.abc import Callable
-import cv2
+from PIL import Image
 
 
 class FieldRoadDataset(Dataset):
@@ -16,12 +15,6 @@ class FieldRoadDataset(Dataset):
             root_dir: Path to the data directory.
             transforms: Optional transforms to be applied on a sample.
         """
-
-        # # mandantory transform for imagenet
-        # # https://github.com/pytorch/examples/blob/97304e232807082c2e7b54c597615dc0ad8f6173/imagenet/main.py#L197-L198
-        self.imagenet_transform = A.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        )
         self.transforms = transforms
 
         unique_class_names = set(labels)
@@ -39,15 +32,14 @@ class FieldRoadDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple:
         """Get an item of the dataset"""
         file_name = self.files[idx]
-        # use cv2 to read image
-        image = cv2.cvtColor(cv2.imread(file_name), cv2.COLOR_BGR2RGB)
+        # use PIL to read image
+        image = Image.open(file_name)
 
         # mandantory transform for imagenet
         # image = self.imagenet_transform(image=image)["image"]
-        image = self.imagenet_transform(image=image)["image"]
 
         # apply optional transforms if provided (e.g Resize, Rotate, Translate, etc.)
         if self.transforms:
-            image = self.transforms(image=image)["image"]
+            image = self.transforms(image)
 
         return image, self.class_name_to_idx[self.labels[idx]]
