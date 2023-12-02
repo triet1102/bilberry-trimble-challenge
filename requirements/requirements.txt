@@ -2,3 +2,5 @@ lightning
 torchvision
 albumentations
 gdown
+transformers
+tensorboard
