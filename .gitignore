@@ -1,0 +1,9 @@
+# python installed packages
+.venv/
+
+# dataset
+dataset.zip
+dataset
+
+# pycache
+__pycache__
