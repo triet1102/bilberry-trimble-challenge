@@ -7,3 +7,9 @@ dataset
 
 # pycache
 __pycache__
+
+# tensorboard logs
+runs
+
+# wandb logs
+wandb
