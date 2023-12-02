@@ -1,7 +1,17 @@
 from src.data_preprocessing.data_module import FieldRoadDatasetKFold
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import sys
+import os
+
+sys.path.append(os.getcwd())
+
 
 datamodule = FieldRoadDatasetKFold(
     root_dir="dataset/train",
+    transforms=A.Compose(
+        [A.SmallestMaxSize(256), A.CenterCrop(224, 224), ToTensorV2()]
+    ),
     batch_size=32,
     image_size=224,
     nb_folds=5,

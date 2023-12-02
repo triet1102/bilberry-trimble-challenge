@@ -43,6 +43,7 @@ class FieldRoadDatasetKFold:
         train_dataset = FieldRoadDataset(
             files=[self.files[idx] for idx in train_indexes],
             labels=[self.labels[idx] for idx in train_indexes],
+            transforms=self.transforms,
         )
 
         return DataLoader(
@@ -56,6 +57,7 @@ class FieldRoadDatasetKFold:
         val_dataset = FieldRoadDataset(
             files=[self.files[idx] for idx in val_indexes],
             labels=[self.labels[idx] for idx in val_indexes],
+            transforms=self.transforms,
         )
 
         return DataLoader(
