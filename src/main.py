@@ -20,11 +20,11 @@ class Config:
 
 
 config = Config(
-    lr=1e-5,
+    lr=1e-3,
     nb_folds=3,
-    nb_epochs=10,
+    nb_epochs=20,
     optimizer=torch.optim.AdamW,
-    batch_size=16,
+    batch_size=32,
     freeze_backbone=True,
 )
 
@@ -47,12 +47,14 @@ accuracy_function = BinaryAccuracy()
 
 # get model specific transforms (normalization, resize)
 data_config = timm.data.resolve_model_data_config(model)
-transforms = timm.data.create_transform(**data_config, is_training=True)
+transforms_train = timm.data.create_transform(**data_config, is_training=True, no_aug=True)
+transforms_eval = timm.data.create_transform(**data_config, is_training=False)
 
 dataset_k_fold = FieldRoadDatasetKFold(
-    transforms=transforms, nb_folds=config.nb_folds, batch_size=config.batch_size
+    transforms_train=transforms_train, transforms_eval=transforms_eval, nb_folds=config.nb_folds, batch_size=config.batch_size
 )
 dataset_k_fold.setup()
+print("OK")
 
 logger = wandb.init(project="image_classification", config=config.__dict__)
 
