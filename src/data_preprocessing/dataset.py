@@ -7,7 +7,11 @@ class FieldRoadDataset(Dataset):
     """Field Road Dataset"""
 
     def __init__(
-        self, files: list[str], labels: list[int], transforms: Callable | None = None
+        self,
+        files: list[str],
+        labels: list[int],
+        class_names_to_idx: dict[str, int],
+        transforms: Callable | None = None,
     ):
         """Create a FieldRoadDataset object
 
@@ -17,11 +21,7 @@ class FieldRoadDataset(Dataset):
         """
         self.transforms = transforms
 
-        unique_class_names = set(labels)
-        self.class_name_to_idx = {
-            class_name: idx for idx, class_name in enumerate(unique_class_names)
-        }
-
+        self.class_names_to_idx = class_names_to_idx
         self.files = files
         self.labels = labels
 
@@ -42,4 +42,4 @@ class FieldRoadDataset(Dataset):
         if self.transforms:
             image = self.transforms(image)
 
-        return image, self.class_name_to_idx[self.labels[idx]]
+        return image, self.class_names_to_idx[self.labels[idx]]
