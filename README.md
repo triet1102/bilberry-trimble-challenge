@@ -35,3 +35,10 @@ pre-commit install --allow-missing-config
 source .venv/bin/activate
 unset PS1
 ```
+
+## TODO
+- [ ] Test Code is working: Can use 10 random train images and the rest for test. Train on 20 epochs => model will quick overfit
+- [ ] Test unsupervised learning KNN
+- [ ] Test SVM without training (CNN features, CLIP's image encoder features)
+- [ ] Test Fine-tuning only the head
+- [ ] Test Vision Transformer (CLIP)
