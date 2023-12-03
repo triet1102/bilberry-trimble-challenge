@@ -5,3 +5,6 @@ gdown
 timm
 wandb
 tensorboard
+kaleido
+plotly==5.18.0
+scikit-learn
