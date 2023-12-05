@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
-from collections.abc import Callable
 from PIL import Image
+from src.utils.helper_functions import get_image_transforms, get_image_augmentations
 
 
 class FieldRoadDataset(Dataset):
@@ -11,16 +11,14 @@ class FieldRoadDataset(Dataset):
         files: list[str],
         labels: list[int],
         class_names_to_idx: dict[str, int],
-        transforms: Callable | None = None,
+        augmentation: bool,
     ):
-        """Create a FieldRoadDataset object
-
-        Args:
-            root_dir: Path to the data directory.
-            transforms: Optional transforms to be applied on a sample.
         """
-        self.transforms = transforms
-
+        Create a FieldRoadDataset object
+        """
+        self.image_transforms = (
+            get_image_transforms() if not augmentation else get_image_augmentations()
+        )
         self.class_names_to_idx = class_names_to_idx
         self.files = files
         self.labels = labels
@@ -32,14 +30,9 @@ class FieldRoadDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple:
         """Get an item of the dataset"""
         file_name = self.files[idx]
+
         # use PIL to read image
         image = Image.open(file_name)
-
-        # mandantory transform for imagenet
-        # image = self.imagenet_transform(image=image)["image"]
-
-        # apply optional transforms if provided (e.g Resize, Rotate, Translate, etc.)
-        if self.transforms:
-            image = self.transforms(image)
+        image = self.image_transforms(image)
 
         return image, self.class_names_to_idx[self.labels[idx]]

@@ -22,3 +22,6 @@ wandb
 
 # wandb project cache
 image_classification/
+
+# lightning logs
+lightning_logs/
