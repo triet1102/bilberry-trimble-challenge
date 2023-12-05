@@ -8,8 +8,17 @@ dataset
 # pycache
 __pycache__
 
-# tensorboard logs
-runs
-
 # wandb logs
 wandb
+
+# macOS .DS_Store file that stores custom attributes of its containing folder
+.DS_Store
+
+# mypy cache
+.mypy_cache
+
+# ruff cache
+.ruff_cache
+
+# wandb project cache
+image_classification/
