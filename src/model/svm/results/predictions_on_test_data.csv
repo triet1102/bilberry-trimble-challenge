@@ -1,0 +1,11 @@
+,files,predictions
+0,dataset/test_images/10.jpeg,fields
+1,dataset/test_images/1.jpeg,fields
+2,dataset/test_images/6.jpeg,fields
+3,dataset/test_images/7.jpeg,roads
+4,dataset/test_images/8.jpeg,roads
+5,dataset/test_images/4.jpeg,fields
+6,dataset/test_images/5.jpeg,roads
+7,dataset/test_images/9.jpeg,fields
+8,dataset/test_images/2.jpeg,roads
+9,dataset/test_images/3.jpeg,roads
