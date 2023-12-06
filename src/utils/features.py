@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 from pathlib import Path
 from src.data_preprocessing.data_module import FieldRoadDatasetKFold
 
+from tqdm import tqdm
+
 
 def extract_features_and_plot(
     model: torch.nn.Module,
@@ -20,7 +22,8 @@ def extract_features_and_plot(
     output_labels = []
 
     # extract features
-    for data, label in dataloader:
+    print("Extracting feature from pre-trained backbone...")
+    for data, label in tqdm(dataloader):
         with torch.no_grad():
             output = model(data)  # dim
 
@@ -33,10 +36,9 @@ def extract_features_and_plot(
     output_features = output_features.numpy()
     output_labels = output_labels.numpy()
 
-    pca = PCA(n_components=2)
-    pca_features = pca.fit_transform(output_features)
-
     if save_plot:
+        pca = PCA(n_components=2)
+        pca_features = pca.fit_transform(output_features)
         fig = go.Figure()
 
         for class_name in data_module.class_names:
@@ -49,18 +51,19 @@ def extract_features_and_plot(
                 go.Scatter(
                     x=[pca_features[idx, 0] for idx in indexes],
                     y=[pca_features[idx, 1] for idx in indexes],
-                    mode="markers+text",
+                    mode="markers",
                     name=class_name,
                     text=[
                         f"{data_module.files[idx].split('/')[-1]}" for idx in indexes
                     ],
-                    textposition="bottom center",
                 )
             )
 
+        fig.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+        fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+
         Path.mkdir(Path("plots"), parents=True, exist_ok=True)
-        fig.write_html(
-            "plots/train_embeddings.html", full_html=False, include_plotlyjs="cdn"
-        )
+        fig.write_html("plots/train_embeddings.html")
+        fig.write_image("plots/train_embeddings.png")
 
     return output_features, output_labels
