@@ -13,7 +13,6 @@ def main():
     model = timm.create_model(
         model_name=config.model.backbone,
         pretrained=True,
-        num_classes=config.model.num_classes,
     )
     data = FieldRoadDatasetKFold(config=config)
 

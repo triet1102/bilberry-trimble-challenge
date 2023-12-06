@@ -37,8 +37,8 @@ class FieldRoadDatasetKFold:
     def setup(self) -> None:
         kf = StratifiedKFold(
             n_splits=self.config.data.nb_folds,
-            shuffle=True,
-            random_state=self.config.data.split_seed,
+            shuffle=False,
+            random_state=None
         )
         self.folds = [fold for fold in kf.split(self.files, self.labels)]
         self.compute_weights_for_each_image()
@@ -95,6 +95,39 @@ class FieldRoadDatasetKFold:
             persistent_workers=True,
         )
 
+    def all_dataloader_train(self) -> DataLoader:
+        """Returns a dataloader with all the data
+        Used for retrain the model after k-fold cross-validation
+        """
+        weighted_sampler = WeightedRandomSampler(
+            weights=self.weights,
+            num_samples=len(self.files),
+            replacement=True,
+        )
+        dataset = FieldRoadDataset(
+            files=self.files,
+            labels=self.labels,
+            class_names_to_idx=self.class_names_to_idx,
+            augmentation=self.config.data.augmentation
+        )
+
+        return DataLoader(
+            dataset=dataset,
+            batch_size=self.config.data.batch_size,
+            shuffle=False,
+            sampler=weighted_sampler,
+            drop_last=True,
+            num_workers=4,
+            persistent_worker=True,
+        ) if self.config.data.weighted_sampler else DataLoader(
+            dataset=dataset,
+            batch_size=self.config.data.batch_size,
+            shuffle=True,
+            drop_last=True,
+            num_workers=4,
+            persistent_worker=True
+        )
+
     def all_dataloader(self) -> DataLoader:
         """Returns a dataloader with all the data
         Used for extracting features from the pretrained model
@@ -103,10 +136,13 @@ class FieldRoadDatasetKFold:
             files=self.files,
             labels=self.labels,
             class_names_to_idx=self.class_names_to_idx,
+            augmentation=False
         )
 
         return DataLoader(
             dataset=dataset,
-            batch_size=self.batch_size,
+            batch_size=32,
             shuffle=False,
+            num_workers=4,
+            persistent_workers=True
         )

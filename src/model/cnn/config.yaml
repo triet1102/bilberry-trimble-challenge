@@ -6,16 +6,11 @@ model:
 
 data:
   root_dir: "dataset/train"
-  nb_folds: 3
+  nb_folds: 5
   batch_size: 32
-
-  # seed for splitting k-fold
-  split_seed: 42
-  augmentation: true
-
+  augmentation: false
   # as training data is imbalanced, we can use weighted sampler
-  weighted_sampler: true
-
+  weighted_sampler: false
   test_dir: "dataset/test_images"
 
 training:

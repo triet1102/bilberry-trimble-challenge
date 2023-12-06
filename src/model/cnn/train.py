@@ -3,7 +3,7 @@ from src.model.cnn.model import ClassificationModel, get_backbone
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 from glob import glob
 from PIL import Image
 import torch
@@ -16,23 +16,24 @@ import wandb
 
 pl.seed_everything(42)
 
-
-def train(config: dict):
+def kfold_cross_valid(config: dict):
     # load the data
     data = FieldRoadDatasetKFold(config=config)
     data.setup()
 
     # Kfold cross-validation
-    for fold_idx in tqdm(range(config.data.nb_folds)):
+    for fold_idx in tqdm(range(3, config.data.nb_folds)):
         logger = WandbLogger(
             project="image_classification",
-            name=f"weigted_sampling_with_augmentation_1_layer_fold_{fold_idx}",
+            name=f"normal_1_layer_fold_{fold_idx}"
         )
         train_loader = data.train_dataloader(fold_index=fold_idx)
         val_loader = data.val_dataloader(fold_index=fold_idx)
 
         # TODO: lr monitor callback, early stopping callback
-        lr_monitor = LearningRateMonitor(logging_interval="epoch")
+        lr_monitor = LearningRateMonitor(
+            logging_interval="epoch"
+        )
         # early_stopping_callback = EarlyStopping(
         #     monitor="val_loss",
         #     mode="min",
@@ -45,19 +46,17 @@ def train(config: dict):
             logger=logger,
             max_epochs=config.training.nb_epochs,
             log_every_n_steps=3,
-            callbacks=callbacks,
+            callbacks=callbacks
         )
         model = ClassificationModel(config=config)
         trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
         wandb.finish()
+    
 
     # plot average test acc
-
-
-def train_with_all_data():
-    # save_model
+def train_with_all_data(config):
+    # use datamodule.all_dataloader_train
     pass
-
 
 def inference(config: dict, test_data_dir: str = "data/test_images"):
     model = get_backbone(
@@ -79,4 +78,5 @@ def inference(config: dict, test_data_dir: str = "data/test_images"):
 
 if __name__ == "__main__":
     config = OmegaConf.load("src/model/cnn/config.yaml")
-    train(config=config)
+    kfold_cross_valid(config=config)
+    
