@@ -1,31 +1,43 @@
 from sklearn import svm
 from sklearn.model_selection import GridSearchCV
-from sklearn import metrics
 import numpy as np
 import pandas as pd
 
-import timm
-from src.data_preprocessing.data_module import FieldRoadDatasetKFold
-from src.utils.features import extract_features_and_plot
-
-import matplotlib.pyplot as plt
+import torch
+import os
 
 from glob import glob
-
 from PIL import Image
 
-import torch
+from src.data_preprocessing.data_module import FieldRoadDatasetKFold
+from src.utils.features import extract_features_and_plot
+from src.utils.helper_functions import (
+    get_backbone,
+    dict_to_yaml,
+    get_image_transforms,
+    plot_predictions,
+)
+
+from omegaconf import OmegaConf
+from joblib import dump, load
+from pathlib import Path
 
 
-# TODO
-# 1. Load the data
-# 2. Extract features using the pretrained model
-# 3. Train the SVM classifier using nested GridSearchCV
-# 4. Evaluate the model
 def grid_search_svm(
     features: np.ndarray,
     labels: np.ndarray,
 ):
+    """grid search SVM to find the best hyperparameters
+
+    Args:
+        features: the extracted features from the backbone
+        labels: the labels of the training data
+    """
+    # define result folder
+    result_folder = Path("src/model/svm/results")
+    result_folder.mkdir(parents=True, exist_ok=True)
+
+    # define the hyperparameters to search
     param_grid = [
         {"C": [0.1, 1, 10, 100, 1000], "kernel": ["linear"]},
         {
@@ -40,119 +52,107 @@ def grid_search_svm(
             "kernel": ["poly"],
         },
     ]
+
+    # init the classifier
     svm_clf = svm.SVC(class_weight="balanced")
+    # init the grid search
     grid_searcher = GridSearchCV(
         estimator=svm_clf,
         param_grid=param_grid,
         scoring=["accuracy", "precision", "recall", "f1"],
         refit="f1",
-        verbose=3,
     )
     grid_searcher.fit(X=features, y=labels)
 
+    # Save grid search results
     cv_results_df = pd.DataFrame(grid_searcher.cv_results_)
-    cv_results_df.to_csv("svm_grid_search_results.csv")
+    cv_results_df.to_csv(os.path.join(result_folder, "grid_search_results.csv"))
 
-    cv_best_params = pd.DataFrame(
-        list(grid_searcher.best_params_.items()), columns=["Parameters", "Value"]
-    )
-    cv_best_params.to_csv("svm_grid_search_best_params.csv")
+    # Write best params found in a yaml file
+    cv_best_params = grid_searcher.best_params_
+    dict_to_yaml(cv_best_params, os.path.join(result_folder, "best_params.yaml"))
 
-    return grid_searcher.best_estimator_
+    # save best SVM
+    best_estimator = grid_searcher.best_estimator_
+    dump(best_estimator, os.path.join(result_folder, "best_SVM.joblib"))
 
 
 def evaluate(
     estimator: svm.SVC,
-    features: np.ndarray,
-    labels: np.ndarray,
-    files: list[str],
-    class_names: list[str],
-):
+    model: torch.nn.Module,
+    data_module: FieldRoadDatasetKFold,
+) -> None:
     """
     Visualization given an SVC estimator:
         Draw ROC, PR curve with AUC value
         Draw confusion matrix
         Save wrong classified samples
     """
-    # ROC curve
-    plt.figure()
-    metrics.RocCurveDisplay.from_estimator(estimator, features, labels)
-    plt.savefig("svm_roc_curve.png")
-    plt.close()
-
-    # PR curve
-    plt.figure()
-    metrics.PrecisionRecallDisplay.from_estimator(estimator, features, labels)
-    plt.savefig("svm_pr_curve.png")
-    plt.close()
-
-    # Confusion matrix
-    plt.figure()
-    metrics.ConfusionMatrixDisplay.from_estimator(estimator, features, labels)
-    plt.savefig("svm_conf_matrix.png")
-
-    # log all label predictions
-    predictions = estimator.predict(features)
-    predictions_df = pd.DataFrame(
-        {
-            "files": files,
-            "predictions": [class_names[prediction] for prediction in predictions],
-            "labels": [class_names[label] for label in labels],
-        }
-    )
-    predictions_df.to_csv("svm_predictions_on_train_data.csv")
+    # define result folder
+    result_folder = Path("src/model/svm/results")
+    result_folder.mkdir(parents=True, exist_ok=True)
 
     # log all label predictions on the test dataset
     files_test = [f for f in glob("dataset/test_images/*")]
     features_test = []
-    model = timm.create_model(model_name="convnextv2_tiny.fcmae", pretrained=True)
-    model.eval()
-    # get model specific transforms
-    data_config = timm.data.resolve_model_data_config(model)
-    transforms_eval = timm.data.create_transform(**data_config, is_training=False)
+    transforms = get_image_transforms()
 
+    model.eval()
     for file in files_test:
         image = Image.open(file)
-        image = transforms_eval(image)
+        image = transforms(image)
         with torch.no_grad():
             feature = model(image.unsqueeze(0))
         features_test.append(feature.squeeze(0).numpy())
 
     features_test = np.array(features_test)
-    print(features_test.shape)
     predictions_test = estimator.predict(features_test)
-    print(predictions_test.shape)
     predictions_test_df = pd.DataFrame(
         {
             "files": files_test,
-            "predictions": [class_names[prediction] for prediction in predictions_test],
+            "predictions": [
+                data_module.class_names[prediction] for prediction in predictions_test
+            ],
         }
     )
-    predictions_test_df.to_csv("svm_predictions_on_test_data.csv")
+    predictions_test_df.to_csv(
+        os.path.join(result_folder, "predictions_on_test_data.csv")
+    )
+
+    plot_predictions(
+        file_names=files_test,
+        predictions=predictions_test,
+        class_names=data_module.class_names,
+        save_path=os.path.join(result_folder, "predictions_on_test_data.png"),
+    )
 
 
-def test(config):
-    model = timm.create_model(model_name="convnextv2_tiny.fcmae", pretrained=True)
-    # get model specific transforms (normalization, resize)
-    data_config = timm.data.resolve_model_data_config(model)
-    transforms_eval = timm.data.create_transform(**data_config, is_training=False)
-
-    dataset_k_fold = FieldRoadDatasetKFold(transforms_eval=transforms_eval)
-    dataset_k_fold.setup()
+def main(config):
+    model = get_backbone(config)
+    data = FieldRoadDatasetKFold(config)
     features, labels = extract_features_and_plot(
-        model=model, data_module=dataset_k_fold, save_plot=False
+        model=model, data_module=data, save_plot=False
     )
     print(f"Features shape: {features.shape}\nLabels shape: {labels.shape}")
-    best_estimator = grid_search_svm(features, labels)
 
-    evaluate(
-        best_estimator,
-        features,
-        labels,
-        dataset_k_fold.files,
-        dataset_k_fold.class_names,
-    )
+    # define result folder
+    result_folder = Path("src/model/svm/results")
+    result_folder.mkdir(parents=True, exist_ok=True)
+
+    # train the model
+    if config.train:
+        grid_search_svm(features, labels)
+
+    try:
+        best_estimator = load(os.path.join(result_folder, "best_SVM.joblib"))
+    except FileNotFoundError:
+        print("No saved estimator found. Need to train first!")
+        return
+
+    # do the inference
+    evaluate(estimator=best_estimator, model=model, data_module=data)
 
 
 if __name__ == "__main__":
-    test()
+    config = OmegaConf.load("src/model/svm/config.yaml")
+    main(config)

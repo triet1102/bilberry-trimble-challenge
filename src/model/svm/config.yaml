@@ -1,3 +1,8 @@
-backbone: "convnextv2_tiny.fcmae"
+model:
+  backbone: "convnextv2_tiny.fcmae"
+  freeze_backbone: true
 
 data:
+  root_dir: "dataset/train"
+
+train: true
