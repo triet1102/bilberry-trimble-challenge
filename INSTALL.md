@@ -1,10 +1,11 @@
 # Instruction to install and run the code (for macOS)
 
-### Clone the repository
+### Clone the repository and update .zshrc
 ```bash
 cd ~
 git clone git@github.com:triet1102/bilberry-trimble-challenge.git
 cd bilberry-trimble-challenge
+echo 'export PYTHONPATH=$PWD' >> ~/.zshrc
 ```
 
 ### Install `Pyenv`
