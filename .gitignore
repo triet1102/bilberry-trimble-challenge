@@ -25,3 +25,6 @@ image_classification/
 
 # lightning logs
 lightning_logs/
+
+# jupyter notebook checkpoints
+.ipynb_checkpoints/
