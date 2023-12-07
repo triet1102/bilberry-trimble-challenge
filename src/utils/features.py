@@ -6,6 +6,11 @@ from pathlib import Path
 from src.data_preprocessing.data_module import FieldRoadDatasetKFold
 
 from tqdm import tqdm
+from glob import glob
+from src.model.cnn.model import ClassificationModel
+from PIL import Image
+import torch.nn.functional as F
+from src.utils.helper_functions import get_image_transforms
 
 
 def extract_features_and_plot(
@@ -13,6 +18,19 @@ def extract_features_and_plot(
     data_module: FieldRoadDatasetKFold,
     save_plot: bool,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Extract features from the pre-trained backbone and plot them
+
+    Args:
+        model: the model to extract features from its backbone
+        data_module: the data module to get the data
+        save_plot: whether to save the plot or not
+
+    Returns:
+        output_features: the extracted features
+        output_labels: the labels of the data
+
+        This helps when training a model that requires calculating the features first e.g. SVM
+    """
     model.eval()
 
     # get data
