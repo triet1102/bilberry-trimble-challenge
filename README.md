@@ -18,7 +18,7 @@ Instrunctions to run the code are given in [INSTALL.md](INSTALL.md) file.
 │   ├── model/                      # model creation, training, evaluation
 │   ├── utils/                      # helper functions
 │   ├── __init__.py
-│   ├── main.py
+│   ├── setup.py                    # get the dataset, create the PCA plots
 ├── INSTALL.md
 ├── README.md
 ```
@@ -93,25 +93,82 @@ kernel: poly
 ```
 <img src="src/model/svm/results/best_results.png" alt="Image field"/>
 
-The predictions on test dataset are shown below:
-<img src="src/model/svm/results/predictions_on_test_data.png" alt="SVM test predictionss"/>
+The predictions of the best model on test dataset are shown below:
+<img src="src/model/svm/results/predictions_on_test_data.png" alt="SVM test predictions"/>
 
 
 
 ## Training with pre-trained ConvNeXt
+We use [ConvNeXt](https://huggingface.co/timm/convnextv2_tiny.fcmae), a state-of-the-art CNN model on ImageNet dataset, as backbone. We add a classifier head with 2 outputs nodes represent for 2 classes `Field` and `Road` on top of the backbone. As mentioned before that the training dataset is quite small and imbalanced then:
+<ol>
+  <li>We can freeze the backbone and only train the classifier head.</li>
+  <li>Images pertaining to the Field class should be sampled more frequently with WeightedRandomSampler to achieve a balance between the two classes.</li>
+  <li>The model is trained with 5-fold cross-validation (splitted with StratifiedKFold) for each combination of hyper-parameter. The best model is selected based on the average f1-score of 5 folds.</li>
+</ol>
 
-## TODO
-- [ ] Remove image 3 and 5 of field from training
-- [ ] Test overfit_batches
-- [ ] Find best combination of CNN for K-Fold=5 as same as SVC
-- [ ] Retrain with best combination of CNN for K-Fold
-- [ ] Write code to generate predictions and plots for SVC and CNN
-- [ ] Clean code SVM, write inference function
-- [ ] Make sure dataset sampler is good
-- [ ] Continue write report
-- [ ] Save model checkpoint
+The results of 3 different hyper-parameter combinations are shown below (NB: We only use 1 output layer for the classifier head and we do not use any hidden layer):
+<ol>
+  <li>The <span style="color:green"><strong>Green</strong></span> line means we do normal supsampling with imbalanced data in the train-dataloader.</li>
+  <li>The <span style="color:red"><strong>Red</strong></span> line means we use WeightedRandomSampler to sample more frequently for minor class i.e Field in our case.</li>
+  <li>The <span style="color:blue"><strong>Blue</strong></span> line means we use WeightedRandomSampler to sample more frequently for minor class i.e Field in our case and also apply data augmentations to avoid training on the same images multiple time.</li>
+</ol>
 
-## Future work
-- [ ] Acquire more data
+| ![Image 1](src/model/cnn/results/train_BinaryAccuracy.png) | ![Image 2](src/model/cnn/results/train_BinaryF1Score.png) | ![Image 3](src/model/cnn/results/train_loss.png) |
+| :---: | :---: | :---: |
+| ![Image 4](src/model/cnn/results/val_BinaryAccuracy.png) | ![Image 5](src/model/cnn/results/val_BinaryF1Score.png) | ![Image 6](src/model/cnn/results/val_loss.png) |
+
+We can see that the <span style="color:green"><strong>Green</strong></span> line performs better than <span style="color:red"><strong>Red</strong></span> and the <span style="color:blue"><strong>Blue</strong></span> lines. One reason can be that WeightedRandomSampler can sample some specific images multiple times than others, that can lead the model bias toward wrong direction. Other reason can be that the data augmentation is not strong enough to make the model generalize better.
+
+We then train the model on the whole training dataset with the best configuration (configuration of the <span style="color:green"><strong>Green</strong></span> line) and evaluate on the test dataset. The complete configuration is shown below:
+
+```yaml
+model:
+  backbone: "convnextv2_tiny.fcmae"
+  hidden_units: 0
+  num_classes: 2
+  freeze_backbone: true
+
+data:
+  root_dir: "dataset/train"
+  nb_folds: 5
+  batch_size: 32
+  augmentation: false
+  # as training data is imbalanced, we can use weighted sampler
+  weighted_sampler: false
+  test_dir: "dataset/test_images"
+
+training:
+  learning_rate: 1e-3
+  lr_monitor: "train_loss"
+  weight_decay: 1e-3
+  nb_epochs: 40
+  lr_decay_patience: 2
+  lr_decay_threshold: 0.01
+```
+
+The predictions of the best model on test dataset are shown below:
+<img src="src/model/cnn/results/predictions_on_test_data.png" alt="CNN test predictions"/>
+
+We notice that the [image 4](dataset/test_images/4.jpeg) and [image 7](dataset/test_images/7.jpeg) are misclassified, while they are correctly classified by the SVC model. Some possible reasons are 
+<ol>
+  <li>Our CNN classifier head contain only one linear layer, which might not be enough to learn the complex features of the images, whereas in SVC, the polynomial kernel at degree 3 is used, which is more complex than a linear layer and make it possible to correctly classify these images.</li>
+  <li>The CNN could potentially acquire knowledge about sky features more effectively, given that road images tend to include the sky more frequently than field images. Additionally, the dataset comprises a larger number of road images compared to field images.</li>
+</ol>
+
+For future work, we can try to add more hidden layers before the classifier head to see if it works better.
+
+## Conclusion
+<ol>
+  <li>The dataset is small then training a Deep Neural is impossible (model will overfit for just several epochs), except freezing the backbone and train for few parameters for the head classifier.</li>
+  <li>Data imbalanced can lead to unstable training for Deep Neural Network</li>
+  <li>SVC performs effectively, utilizing a Polynomial kernel that is more intricate than a linear layer in our CNN context. The SVC endeavors to identify a plane that efficiently separates the classes of Field and Road, maximizing the margin/distance to these two categories.</li>
+  <li>The CNN performs less effective than SVC as it use only 1 linear layer for the classifier head. The data imbalanced can also affect the training process.</li>
+</ol>
+
+
+## Future work/TODO
+For future work, we can try to:
+- [ ] Acquire more data when training with deep neural network
+- [ ] Test with a more complex classifier head for CNN (add some hidden layers before 2-class fully connected layer)
 - [ ] Test Vision-Language model e.g CLIP for zero-shot learning
 - [ ] Compare CNN features vs CLIP's image encoder features
