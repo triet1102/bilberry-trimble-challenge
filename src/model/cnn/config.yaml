@@ -15,8 +15,8 @@ data:
 
 training:
   learning_rate: 1e-3
+  lr_monitor: "train_loss"
   weight_decay: 1e-3
-  nb_epochs: 50
-  warmup_epochs: 5
+  nb_epochs: 40
   lr_decay_patience: 2
   lr_decay_threshold: 0.01

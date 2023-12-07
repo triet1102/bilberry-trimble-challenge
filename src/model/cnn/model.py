@@ -15,31 +15,28 @@ def save_model(model: torch.nn.Module, file_path: str) -> None:
     """
     torch.save(model.state_dict(), file_path)
 
+
 class ClassificationModel(pl.LightningModule):
-    def __init__(
-        self,
-        config: dict
-    ):
+    def __init__(self, config: dict):
         super().__init__()
         self.save_hyperparameters(config)
         self.config = config
         self.backbone = get_backbone(config=config)
         self.feature_dim = self.backbone.head.num_features
-        self.classifier = nn.Sequential(
-            nn.Linear(
-                in_features=self.feature_dim,
-                out_features=config.model.hidden_units
-            ),
-            nn.ReLU(),
-            nn.Linear(config.model.hidden_units, config.model.num_classes)
-        ) if config.model.hidden_units > 0 else nn.Linear(self.feature_dim, config.model.num_classes)
-        
+        self.classifier = (
+            nn.Sequential(
+                nn.Linear(
+                    in_features=self.feature_dim, out_features=config.model.hidden_units
+                ),
+                nn.ReLU(),
+                nn.Linear(config.model.hidden_units, config.model.num_classes),
+            )
+            if config.model.hidden_units > 0
+            else nn.Linear(self.feature_dim, config.model.num_classes)
+        )
 
         self.loss_function = torch.nn.CrossEntropyLoss()
-        metrics = MetricCollection([
-            BinaryAccuracy(),
-            BinaryF1Score()
-        ])
+        metrics = MetricCollection([BinaryAccuracy(), BinaryF1Score()])
         self.train_metrics = metrics.clone(prefix="train_")
         self.val_metrics = metrics.clone(prefix="val_")
 
@@ -57,7 +54,7 @@ class ClassificationModel(pl.LightningModule):
             "lr_scheduler": {
                 "scheduler": scheduler,
                 "interval": "epoch",
-                "monitor": "val_loss",
+                "monitor": self.config.training.lr_monitor,
             },
         }
 
@@ -65,7 +62,7 @@ class ClassificationModel(pl.LightningModule):
         self.backbone.eval()
         with torch.no_grad():
             features = self.backbone(inputs)
-        
+
         outputs = self.classifier(features)
 
         return outputs
@@ -78,7 +75,9 @@ class ClassificationModel(pl.LightningModule):
         # update train metrics
         self.train_metrics.update(pred, labels)
 
-        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
 
         return loss
 
@@ -95,9 +94,11 @@ class ClassificationModel(pl.LightningModule):
         loss = self.loss_function(outputs, labels)
 
         # update validation metrics
-        self.val_metrics.update(pred, labels)  
+        self.val_metrics.update(pred, labels)
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
 
         return loss
 
