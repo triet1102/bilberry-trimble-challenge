@@ -118,14 +118,14 @@ class FieldRoadDatasetKFold:
             sampler=weighted_sampler,
             drop_last=True,
             num_workers=4,
-            persistent_worker=True,
+            persistent_workers=True,
         ) if self.config.data.weighted_sampler else DataLoader(
             dataset=dataset,
             batch_size=self.config.data.batch_size,
             shuffle=True,
             drop_last=True,
             num_workers=4,
-            persistent_worker=True
+            persistent_workers=True
         )
 
     def all_dataloader(self) -> DataLoader:
