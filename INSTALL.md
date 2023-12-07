@@ -37,6 +37,17 @@ source .venv/bin/activate
 pip install -r requirements/requirements.txt --no-deps
 ```
 
+### To run the code
+```bash
+# download the dataset and plot the embeddings of the training dataset in 2D space
+python src/setup.py
+
+# train and evaluate the SVM model
+python src/model/svm/runner.py
+
+# train and evaluate the CNN model
+python src/model/cnn/runner.py
+```
 
 # Bonus
 ### Auto activate python environment when cd into the project with `direnv`
