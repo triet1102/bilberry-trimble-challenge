@@ -27,7 +27,7 @@ def grid_search_svm(
     features: np.ndarray,
     labels: np.ndarray,
 ):
-    """grid search SVM to find the best hyperparameters
+    """Grid search SVM to find the best hyperparameters
 
     Args:
         features: the extracted features from the backbone
@@ -82,12 +82,8 @@ def evaluate(
     model: torch.nn.Module,
     data_module: FieldRoadDatasetKFold,
 ) -> None:
-    """
-    Visualization given an SVC estimator:
-        Draw ROC, PR curve with AUC value
-        Draw confusion matrix
-        Save wrong classified samples
-    """
+    """Evaluate the model on the test dataset"""
+
     # define result folder
     result_folder = Path("src/model/svm/results")
     result_folder.mkdir(parents=True, exist_ok=True)
